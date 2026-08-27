@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gerador de Parecer — Impedâncias | COPEL</title>
+<style>
+/* Variáveis de cores padrão da identidade visual Copel */
+:root {
+    --copel-orange: #FF6600;
+    --copel-orange-dark: #E65C00;
+    --bg-color: #F4F6F9;
+    --card-bg: #FFFFFF;
+    --text-main: #2C3E50;
+    --text-muted: #7F8C8D;
+    --border-color: #DCE1E5;
+    --input-bg: #FAFCFE;
+    --success-bg: #E8F8F0;
+    --success-text: #0E8F42;
+    --danger-bg: #FDF2F2;
+    --danger-text: #C0392B;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI', Roboto, sans-serif; background: var(--bg-color); color: var(--text-main); line-height: 1.4; }
+
+/* Topo e cabeçalho do sistema */
+.topo { background: var(--copel-orange); height: 65px; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+.topo-brand { display: flex; align-items: center; gap: 15px; }
+.logo { height: 38px; width: auto; object-fit: contain; }
+.titulo { color: #FFF; font-size: 16px; font-weight: 700; border-left: 3px solid rgba(255,255,255,0.6); padding-left: 12px; }
+.badge-sistema { background: rgba(255,255,255,0.2); color: #FFF; padding: 4px 10px; border-radius: 12px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+
+/* Layout e grid principal */
+.container { width: 96%; max-width: 1400px; margin: 12px auto; padding-bottom: 20px; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+.card { background: var(--card-bg); border-radius: 6px; border: 1px solid var(--border-color); overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.02); }
+.card-header { background: var(--card-bg); color: var(--text-main); padding: 10px 14px; font-size: 12px; font-weight: 700; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 8px; }
+.card-header::before { content: ''; width: 3px; height: 12px; background: var(--copel-orange); border-radius: 2px; }
+.card-body { padding: 12px 14px; }
+
+/* Formulários e campos de entrada */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; align-items: center; }
+label { font-size: 11px; font-weight: 600; color: var(--text-main); }
+input, select { width: 100%; height: 30px; padding: 2px 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--input-bg); font-size: 12px; color: var(--text-main); transition: 0.2s; }
+input:focus, select:focus { outline: none; border-color: var(--copel-orange); background: #FFF; box-shadow: 0 0 0 2px rgba(255,102,0,0.1); }
+input[readonly] { background: #E9ECEF; color: #495057; cursor: not-allowed; font-weight: 700; }
+
+.info { margin-top: 10px; padding: 6px 10px; background: var(--success-bg); color: var(--success-text); border: 1px solid #C3E6D2; border-radius: 4px; font-size: 10px; font-weight: 700; }
+.info-reprovado { background: var(--danger-bg); color: var(--danger-text); border-color: #F5C6CB; }
+
+/* Estrutura inline para agrupamento de rótulo à esquerda */
+.input-inline-group { display: flex; align-items: center; gap: 6px; width: 100%; }
+.input-inline-group span { font-size: 10.5px; font-weight: 600; color: var(--text-muted); white-space: nowrap; }
+
+/* Seções dinâmicas */
+.campo-condicional { display: none; flex-direction: column; gap: 8px; }
+.campo-condicional.ativo { display: flex !important; }
+
+/* Checklist de reprovação */
+.reprovacao-list { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+.reprovacao-item { display: flex; align-items: flex-start; gap: 8px; font-size: 11px; }
+.reprovacao-item input[type="checkbox"] { width: 14px; height: 14px; margin-top: 2px; cursor: pointer; }
+
+/* Bloco do Parecer Final e botões de ação */
+.parecer { background: var(--card-bg); border-radius: 6px; border: 1px solid var(--border-color); overflow: hidden; }
+.parecer-header { padding: 10px 14px; font-size: 12px; font-weight: 700; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 8px; }
+.parecer-header::before { content: ''; width: 3px; height: 12px; background: var(--copel-orange); border-radius: 2px; }
+textarea { width: 100%; height: 260px; border: none; resize: vertical; padding: 12px; background: #FAFCFE; font-family: 'Consolas', 'Courier New', monospace; font-size: 12px; color: #2C3E50; line-height: 1.4; }
+textarea:focus { outline: none; }
+.botoes { padding: 10px 14px; background: #F9FAFC; border-top: 1px solid var(--border-color); display: flex; gap: 8px; }
+
+/* Estilização dos botões */
+button { background: var(--copel-orange); color: white; border: none; border-radius: 4px; padding: 6px 14px; cursor: pointer; font-weight: 600; font-size: 11px; transition: 0.2s; }
+button:hover { background: var(--copel-orange-dark); }
+button.btn-secondary { background: #6C7A89; }
+button.btn-secondary:hover { background: #5A6573; }
+button.btn-danger { background: #E74C3C; }
+button.btn-danger:hover { background: #C0392B; }
+
+.sub-header { font-size: 11px; font-weight: 700; color: var(--copel-orange); margin-top: 8px; margin-bottom: 4px; border-bottom: 1px dashed var(--border-color); padding-bottom: 2px; grid-column: span 2; }
+.footer-credits { text-align: center; font-size: 11px; color: var(--text-muted); margin-top: 15px; }
+
+@media(max-width: 900px) { .grid, .form-grid { grid-template-columns: 1fr; } .sub-header { grid-column: span 1; } }
+</style>
+</head>
+<body>
+
+<!-- Cabeçalho Visual -->
+<header class="topo">
+    <div class="topo-brand">
+        <img src="logo.png" class="logo" alt="Logo Copel" onerror="this.style.display='none'">
+        <div class="titulo">Gerador de Parecer — Impedâncias</div>
+    </div>
+    <div class="badge-sistema">ANÁLISE DE PROJETOS DA MEDIÇÃO</div>
+</header>
+
+<div class="container">
+    <div class="grid">
+        <!-- Card 1: Identificação do Pedido -->
+        <div class="card">
+            <div class="card-header">IDENTIFICAÇÃO E STATUS DO PROTOCOLO</div>
+            <div class="card-body">
+                <div class="form-grid">
+                    <label>Status da Solicitação*</label>
+                    <select id="statusSolicitacao" onchange="atualizarCampos()">
+                        <option value="APROVADO">APROVADO</option>
+                        <option value="REPROVADO">REPROVADO (INDEFERIDO)</option>
+                    </select>
+
+                    <label id="lblNumUC">Número da UC (caso exista)</label>
+                    <input id="numUC">
+
+                    <label>Nº Referência Elétrica Copel*</label>
+                    <div style="display: flex; gap: 4px;">
+                        <select id="tipoRefEletrica" style="width: 45%;">
+                            <option value="Transformador">Transformador</option>
+                            <option value="Chave de rede">Chave de rede</option>
+                            <option value="Coordenada UTM(X,Y)">Coordenada UTM(X,Y)</option>
+                        </select>
+                        <input id="refEletricaValor" style="width: 55%;">
+                    </div>
+
+                    <label>Localidade*</label>
+                    <input id="localidade">
+
+                    <label>Protocolo Viabilidade (caso exista)</label>
+                    <input id="protocoloViabilidade">
+
+                    <label>Tensão Base*</label>
+                    <select id="tensao" onchange="calcularCurtos()">
+                        <option value="" disabled selected>Selecione...</option>
+                        <option value="13,8 kV">13,8 kV</option>
+                        <option value="34,5 kV">34,5 kV</option>
+                    </select>
+                </div>
+                <div id="infoStatus" class="info">SISTEMA EM MODO DE APROVAÇÃO TÉCNICA (GERAÇÃO DE PARÂMETROS)</div>
+            </div>
+        </div>
+
+        <!-- Card 2: Parâmetros do Protocolo -->
+        <div class="card">
+            <div class="card-header" id="tituloCard2">PARÂMETROS DE CURTO-CIRCUITO E PROTEÇÃO</div>
+            <div class="card-body">
+                
+                <!-- Conteúdo Aprovado -->
+                <div id="secaoAprovado" class="campo-condicional ativo">
+                    <div class="form-grid">
+                        <div class="sub-header">IMPEDÂNCIAS EM p.u. (POTÊNCIA BASE: 100 MVA)</div>
+
+                        <label>Seq. Positiva - R1 (p.u.)*</label>
+                        <input id="r1" oninput="calcularCurtos()">
+
+                        <label>Seq. Positiva - X1 (p.u.)*</label>
+                        <input id="x1" oninput="calcularCurtos()">
+
+                        <label>Seq. Zero - R0 (p.u.)*</label>
+                        <input id="r0" oninput="calcularCurtos()">
+
+                        <label>Seq. Zero - X0 (p.u.)*</label>
+                        <input id="x0" oninput="calcularCurtos()">
+
+                        <label>Curto Trifásico (A)*</label>
+                        <input id="curtoTrifasico" readonly tabindex="-1">
+
+                        <label>Curto Fase-Terra (A)*</label>
+                        <input id="curtoFaseTerra" readonly tabindex="-1">
+
+                        <div class="sub-header">PROTEÇÃO A MONTANTE (RELIGADOR)</div>
+
+                        <label>Nº Operacional Religador*</label>
+                        <input id="numReligador">
+
+                        <label>OPR Nº*</label>
+                        <input id="oprNum">
+
+                        <label>Ajuste de Fase</label>
+                        <div style="display: flex; gap: 6px;">
+                            <div class="input-inline-group">
+                                <span>Corrente:</span>
+                                <input id="corrFase">
+                            </div>
+                            <div class="input-inline-group">
+                                <span>Curva:</span>
+                                <input id="curvaFase">
+                            </div>
+                        </div>
+
+                        <label>Ajuste de Fase (Multiplicadores)</label>
+                        <div style="display: flex; gap: 6px;">
+                            <div class="input-inline-group">
+                                <span>Mult.:</span>
+                                <input id="multFase">
+                            </div>
+                            <div class="input-inline-group">
+                                <span>Add:</span>
+                                <input id="addFase">
+                            </div>
+                        </div>
+
+                        <label>Ajuste de Neutro</label>
+                        <div style="display: flex; gap: 6px;">
+                            <div class="input-inline-group">
+                                <span>Corrente:</span>
+                                <input id="corrNeutro">
+                            </div>
+                            <div class="input-inline-group">
+                                <span>Curva:</span>
+                                <input id="curvaNeutro">
+                            </div>
+                        </div>
+
+                        <label>Ajuste de Neutro (Multiplicadores)</label>
+                        <div style="display: flex; gap: 6px;">
+                            <div class="input-inline-group">
+                                <span>Mult.:</span>
+                                <input id="multNeutro">
+                            </div>
+                            <div class="input-inline-group">
+                                <span>Add:</span>
+                                <input id="addNeutro">
+                            </div>
+                        </div>
+
+                        <label>Ajuste de SEF</label>
+                        <div style="display: flex; gap: 6px;">
+                            <div class="input-inline-group">
+                                <span>Corrente:</span>
+                                <input id="corrSEF">
+                            </div>
+                            <div class="input-inline-group">
+                                <span>Tempo:</span>
+                                <input id="tempoSEF">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Conteúdo Reprovado -->
+                <div id="secaoReprovado" class="campo-condicional">
+                    <label style="font-weight:700; margin-bottom: 6px;">Selecione os motivos do indeferimento:</label>
+                    <div class="reprovacao-list">
+                        <label class="reprovacao-item">
+                            <input type="checkbox" class="chk-motivo" value="Não foi possível localizar o ponto de conexão informado.">
+                            <span>Não foi possível localizar o ponto de conexão informado.</span>
+                        </label>
+                        <label class="reprovacao-item">
+                            <input type="checkbox" class="chk-motivo" value="A planta de situação deve atender a NTC 900100, item 7.1.">
+                            <span>A planta de situação deve atender a NTC 900100, item 7.1.</span>
+                        </label>
+                        <label class="reprovacao-item">
+                            <input type="checkbox" class="chk-motivo" value="As coordenadas devem estar no formato de sistema UTM.">
+                            <span>As coordenadas devem estar no formato de sistema UTM.</span>
+                        </label>
+                        <label class="reprovacao-item">
+                            <input type="checkbox" class="chk-motivo" value="Há divergência entre as informações da planta de situação e o Formulário de Solicitação de Estudo de Disponibilidade do Sistema.">
+                            <span>Há divergência entre as informações da planta de situação e o Formulário.</span>
+                        </label>
+                        <label class="reprovacao-item">
+                            <input type="checkbox" class="chk-motivo" value="Os acessantes de carga (tensão de 69 e 138 kV) devem tramitar sua ligação pelo sistema CAW, disponível em www.copel.com/cawweb .">
+                            <span>Acessantes de carga (69 e 138 kV) devem tramitar pelo sistema CAW.</span>
+                        </label>
+                        <label class="reprovacao-item">
+                            <input type="checkbox" class="chk-motivo" value="O pedido de viabilidade/impedância deve ser solicitado na tensão de 34,5 kV, com os documentos e desenhos atualizados, pois não há disponibilidade para a tensão de 13,8 kV no local indicado.">
+                            <span>Pedido deve ser na tensão de 34,5 kV (sem disponibilidade em 13,8 kV).</span>
+                        </label>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Bloco de Saída do Parecer -->
+    <div class="parecer">
+        <div class="parecer-header">TEXTO FINAL DO PARECER TÉCNICO GERADO</div>
+        <textarea id="resultado" placeholder="O texto gerado do parecer aparecerá aqui..."></textarea>
+        <div class="botoes">
+            <button onclick="gerarParecer()">Gerar Parecer</button>
+            <button class="btn-secondary" onclick="copiarParecer()">Copiar Texto</button>
+            <button class="btn-danger" onclick="limparDados()">Limpar Campos</button>
+        </div>
+    </div>
+
+    <div class="footer-credits">Desenvolvido por Jose Eduardo Silva Dias - Registro: 51407 - Análise de Projetos</div>
+</div>
+
+<script>
+// Converte número com vírgula para float
+function parseNumero(valor) {
+    if (!valor) return NaN;
+    const limpo = valor.toString().replace(/\./g, "").replace(",", ".");
+    return parseFloat(limpo);
+}
+
+// Formata número com 4 casas decimais usando vírgula
+function formatar4Casas(valor) {
+    if (isNaN(valor) || !isFinite(valor)) return "0,0000";
+    return valor.toFixed(4).replace(".", ",");
+}
+
+// Formata Amperes arredondado sem decimais
+function formatarAmpere(valor) {
+    if (isNaN(valor) || !isFinite(valor)) return "";
+    return Math.round(valor).toString();
+}
+
+// Cálculo das correntes de curto com base em p.u. (Sbase = 100 MVA)
+function calcularCurtos() {
+    const r1 = parseNumero(document.getElementById("r1").value);
+    const x1 = parseNumero(document.getElementById("x1").value);
+    const r0 = parseNumero(document.getElementById("r0").value);
+    const x0 = parseNumero(document.getElementById("x0").value);
+    
+    const tensaoTexto = document.getElementById("tensao").value;
+    if (!tensaoTexto) {
+        document.getElementById("curtoTrifasico").value = "";
+        document.getElementById("curtoFaseTerra").value = "";
+        return;
+    }
+
+    const vkV = tensaoTexto.includes("34,5") ? 34.5 : 13.8;
+    const sBase = 100000000; // 100 MVA
+    const iBase = sBase / (Math.sqrt(3) * (vkV * 1000));
+
+    // Curto Trifásico
+    if (!isNaN(r1) && !isNaN(x1)) {
+        const z1Pu = Math.sqrt(r1 * r1 + x1 * x1);
+        if (z1Pu > 0) {
+            const i3phiPu = 1 / z1Pu;
+            const i3phiAmp = i3phiPu * iBase;
+            document.getElementById("curtoTrifasico").value = formatarAmpere(i3phiAmp);
+        } else {
+            document.getElementById("curtoTrifasico").value = "";
+        }
+    } else {
+        document.getElementById("curtoTrifasico").value = "";
+    }
+
+    // Curto Fase-Terra
+    if (!isNaN(r1) && !isNaN(x1) && !isNaN(r0) && !isNaN(x0)) {
+        const rTotalPu = 2 * r1 + r0;
+        const xTotalPu = 2 * x1 + x0;
+        const zTotalPu = Math.sqrt(rTotalPu * rTotalPu + xTotalPu * xTotalPu);
+
+        if (zTotalPu > 0) {
+            const i1phiPu = 3 / zTotalPu;
+            const i1phiAmp = i1phiPu * iBase;
+            document.getElementById("curtoFaseTerra").value = formatarAmpere(i1phiAmp);
+        } else {
+            document.getElementById("curtoFaseTerra").value = "";
+        }
+    } else {
+        document.getElementById("curtoFaseTerra").value = "";
+    }
+}
+
+// Alterna a interface entre Aprovado e Reprovado
+function atualizarCampos() {
+    const status = document.getElementById("statusSolicitacao").value;
+    const isAprovado = status === "APROVADO";
+
+    document.getElementById("secaoAprovado").classList.toggle("ativo", isAprovado);
+    document.getElementById("secaoReprovado").classList.toggle("ativo", !isAprovado);
+
+    document.getElementById("numUC").style.display = isAprovado ? "block" : "none";
+    document.getElementById("lblNumUC").style.display = isAprovado ? "block" : "none";
+
+    const infoStatus = document.getElementById("infoStatus");
+    const tituloCard2 = document.getElementById("tituloCard2");
+
+    if (isAprovado) {
+        infoStatus.className = "info";
+        infoStatus.textContent = "SISTEMA EM MODO DE APROVAÇÃO TÉCNICA (GERAÇÃO DE PARÂMETROS)";
+        tituloCard2.textContent = "PARÂMETROS DE CURTO-CIRCUITO E PROTEÇÃO";
+    } else {
+        infoStatus.className = "info info-reprovado";
+        infoStatus.textContent = "SISTEMA EM MODO DE INDEFERIMENTO / REPROVAÇÃO DE PROTOCOLO";
+        tituloCard2.textContent = "MOTIVOS DO INDEFERIMENTO DA SOLICITAÇÃO";
+    }
+}
+
+// Validações e montagem do parecer final com validação obrigatória da Tensão Base
+function gerarParecer() {
+    const status = document.getElementById("statusSolicitacao").value;
+    let texto = "";
+
+    if (status === "APROVADO") {
+        const numUC = document.getElementById("numUC").value.trim();
+        const refValor = document.getElementById("refEletricaValor").value.trim();
+        const tensao = document.getElementById("tensao").value;
+
+        const obrigatorios = [
+            { id: "refEletricaValor", msg: "Informe o valor do Nº Referência Elétrica Copel." },
+            { id: "localidade", msg: "Informe a Localidade." }
+        ];
+
+        for (let item of obrigatorios) {
+            let el = document.getElementById(item.id);
+            if (!el.value.trim()) {
+                alert(item.msg);
+                el.focus();
+                return;
+            }
+        }
+
+        if (!tensao) {
+            alert("Selecione a Tensão Base (13,8 kV ou 34,5 kV).");
+            document.getElementById("tensao").focus();
+            return;
+        }
+
+        const tipoRef = document.getElementById("tipoRefEletrica").value;
+        const localidade = document.getElementById("localidade").value.trim();
+        const protocoloViabilidade = document.getElementById("protocoloViabilidade").value.trim();
+
+        // Impedâncias e Curto
+        const r1Val = parseNumero(document.getElementById("r1").value);
+        const x1Val = parseNumero(document.getElementById("x1").value);
+        const r0Val = parseNumero(document.getElementById("r0").value);
+        const x0Val = parseNumero(document.getElementById("x0").value);
+
+        const r1Str = isNaN(r1Val) ? "0,0000" : formatar4Casas(r1Val);
+        const x1Str = isNaN(x1Val) ? "0,0000" : formatar4Casas(x1Val);
+        const r0Str = isNaN(r0Val) ? "0,0000" : formatar4Casas(r0Val);
+        const x0Str = isNaN(x0Val) ? "0,0000" : formatar4Casas(x0Val);
+
+        const curtoTrifasico = document.getElementById("curtoTrifasico").value.trim();
+        const curtoFaseTerra = document.getElementById("curtoFaseTerra").value.trim();
+
+        // Proteção
+        const numReligador = document.getElementById("numReligador").value.trim();
+        const oprNum = document.getElementById("oprNum").value.trim();
+        
+        const corrFase = document.getElementById("corrFase").value.trim();
+        const curvaFase = document.getElementById("curvaFase").value.trim();
+        const multFase = document.getElementById("multFase").value.trim();
+        const addFase = document.getElementById("addFase").value.trim();
+
+        const corrNeutro = document.getElementById("corrNeutro").value.trim();
+        const curvaNeutro = document.getElementById("curvaNeutro").value.trim();
+        const multNeutro = document.getElementById("multNeutro").value.trim();
+        const addNeutro = document.getElementById("addNeutro").value.trim();
+
+        const corrSEF = document.getElementById("corrSEF").value.trim();
+        const tempoSEF = document.getElementById("tempoSEF").value.trim();
+
+        // Montagem do bloco de Localização
+        texto += `DADOS DE LOCALIZAÇÃO\n`;
+        if (numUC !== "") {
+            texto += `Unidade Consumidora (UC):   ${numUC}\n`;
+        }
+        texto += `Referência Elétrica Copel:   ${tipoRef} ${refValor}\n`;
+        texto += `Localidade:   ${localidade}\n`;
+        if (protocoloViabilidade !== "") {
+            texto += `Protocolo de Viabilidade:   ${protocoloViabilidade}\n`;
+        }
+        texto += `\n`;
+
+        texto += `VALORES DE IMPEDÂNCIA EM p.u. NO PONTO DE ENTREGA\n`;
+        texto += `Sequência positiva (+):   R1: ${r1Str}   ;   X1: ${x1Str}\n`;
+        texto += `Sequência zero (0):   R0: ${r0Str}   ;   X0: ${x0Str}\n`;
+        texto += `Potência Base:   100 MVA\n`;
+        texto += `Tensão Base:   ${tensao}\n\n`;
+
+        texto += `VALOR DA CORRENTE DE CURTO CIRCUITO EM AMPÈRES NO PONTO DE ENTREGA\n`;
+        texto += `Trifásico:   ${curtoTrifasico}A\n`;
+        texto += `Fase-Terra máximo:   ${curtoFaseTerra}A\n\n`;
+
+        texto += `DADOS DO RELIGADOR COPEL A MONTANTE\n`;
+        texto += `Número Operacional:   ${numReligador}\n`;
+        texto += `Número da Ordem de proteção (OPR) Copel:   ${oprNum}\n`;
+        texto += `Ajuste de fase:   Corrente: ${corrFase}A   ;   Curva: ${curvaFase}   ;   Mult.: ${multFase}   ;   Add: ${addFase}\n`;
+        texto += `Ajuste de neutro:   Corrente: ${corrNeutro}A   ;   Curva: ${curvaNeutro}   ;   Mult.: ${multNeutro}   ;   Add: ${addNeutro}\n`;
+        texto += `Ajuste de SEF:   Corrente: ${corrSEF}A   ;   Tempo: ${tempoSEF}s`;
+
+    } else {
+        const selecionados = Array.from(document.querySelectorAll(".chk-motivo:checked")).map(c => c.value);
+
+        if (selecionados.length === 0) {
+            alert("Selecione ao menos um motivo para o indeferimento.");
+            return;
+        }
+
+        texto += `A solicitação foi indeferida pelos seguintes motivos:\n\n`;
+        
+        selecionados.forEach(motivo => {
+            texto += `-${motivo}\n`;
+        });
+
+        texto += `\nCom os itens corrigidos, fazer nova solicitação na agência virtual, disponível em www.copel.com/avaweb`;
+    }
+
+    document.getElementById("resultado").value = texto;
+}
+
+// Copiar para área de transferência
+function copiarParecer() {
+    const textarea = document.getElementById("resultado");
+    if (!textarea.value) {
+        alert("Gere o parecer antes de copiar.");
+        return;
+    }
+    navigator.clipboard.writeText(textarea.value);
+    alert("Parecer copiado para a área de transferência.");
+}
+
+// Limpar formulários
+function limparDados() {
+    document.querySelectorAll("input").forEach(input => {
+        if (input.type === "checkbox") {
+            input.checked = false;
+        } else {
+            input.value = "";
+        }
+    });
+    document.querySelectorAll("select").forEach(select => select.selectedIndex = 0);
+    document.getElementById("resultado").value = "";
+    atualizarCampos();
+}
+
+// Inicializa estado visual
+atualizarCampos();
+</script>
+
+</body>
+</html>
