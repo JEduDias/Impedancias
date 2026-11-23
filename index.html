@@ -62,13 +62,15 @@ input[readonly] { background: #E9ECEF; color: #495057; cursor: not-allowed; font
 .reprovacao-item { display: flex; align-items: flex-start; gap: 8px; font-size: 11px; }
 .reprovacao-item input[type="checkbox"] { width: 14px; height: 14px; margin-top: 2px; cursor: pointer; }
 
-/* Bloco do Parecer Final e botões de ação */
+/* Bloco do Parecer Final e botões no topo */
 .parecer { background: var(--card-bg); border-radius: 6px; border: 1px solid var(--border-color); overflow: hidden; }
-.parecer-header { padding: 10px 14px; font-size: 12px; font-weight: 700; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 8px; }
-.parecer-header::before { content: ''; width: 3px; height: 12px; background: var(--copel-orange); border-radius: 2px; }
+.parecer-header { padding: 8px 14px; font-size: 12px; font-weight: 700; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; background: #F9FAFC; }
+.parecer-titulo { display: flex; align-items: center; gap: 8px; }
+.parecer-titulo::before { content: ''; width: 3px; height: 12px; background: var(--copel-orange); border-radius: 2px; }
+.botoes { display: flex; gap: 8px; align-items: center; }
+
 textarea { width: 100%; height: 260px; border: none; resize: vertical; padding: 12px; background: #FAFCFE; font-family: 'Consolas', 'Courier New', monospace; font-size: 12px; color: #2C3E50; line-height: 1.4; }
 textarea:focus { outline: none; }
-.botoes { padding: 10px 14px; background: #F9FAFC; border-top: 1px solid var(--border-color); display: flex; gap: 8px; }
 
 /* Estilização dos botões */
 button { background: var(--copel-orange); color: white; border: none; border-radius: 4px; padding: 6px 14px; cursor: pointer; font-weight: 600; font-size: 11px; transition: 0.2s; }
@@ -77,6 +79,31 @@ button.btn-secondary { background: #6C7A89; }
 button.btn-secondary:hover { background: #5A6573; }
 button.btn-danger { background: #E74C3C; }
 button.btn-danger:hover { background: #C0392B; }
+
+/* Notificação Toast (Aviso sem clique) */
+.toast {
+    visibility: hidden;
+    min-width: 240px;
+    background-color: #2C3E50;
+    color: #FFF;
+    text-align: center;
+    border-radius: 4px;
+    padding: 10px 16px;
+    position: fixed;
+    z-index: 1000;
+    right: 24px;
+    bottom: 24px;
+    font-size: 12px;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+    border-left: 4px solid var(--copel-orange);
+    opacity: 0;
+    transition: opacity 0.3s, visibility 0.3s;
+}
+.toast.show {
+    visibility: visible;
+    opacity: 1;
+}
 
 .sub-header { font-size: 11px; font-weight: 700; color: var(--copel-orange); margin-top: 8px; margin-bottom: 4px; border-bottom: 1px dashed var(--border-color); padding-bottom: 2px; grid-column: span 2; }
 .footer-credits { text-align: center; font-size: 11px; color: var(--text-muted); margin-top: 15px; }
@@ -273,17 +300,22 @@ button.btn-danger:hover { background: #C0392B; }
 
     <!-- Bloco de Saída do Parecer -->
     <div class="parecer">
-        <div class="parecer-header">TEXTO FINAL DO PARECER TÉCNICO GERADO</div>
-        <textarea id="resultado" placeholder="O texto gerado do parecer aparecerá aqui..."></textarea>
-        <div class="botoes">
-            <button onclick="gerarParecer()">Gerar Parecer</button>
-            <button class="btn-secondary" onclick="copiarParecer()">Copiar Texto</button>
-            <button class="btn-danger" onclick="limparDados()">Limpar Campos</button>
+        <div class="parecer-header">
+            <div class="parecer-titulo">TEXTO FINAL DO PARECER TÉCNICO GERADO</div>
+            <div class="botoes">
+                <button onclick="gerarParecer()">Gerar Parecer</button>
+                <button class="btn-secondary" onclick="copiarParecer()">Copiar Texto</button>
+                <button class="btn-danger" onclick="limparDados()">Limpar Campos</button>
+            </div>
         </div>
+        <textarea id="resultado" placeholder="O texto gerado do parecer aparecerá aqui..."></textarea>
     </div>
 
     <div class="footer-credits">Desenvolvido por Jose Eduardo Silva Dias - Registro: 51407 - Análise de Projetos</div>
 </div>
+
+<!-- Elemento de aviso flutuante -->
+<div id="toastAviso" class="toast">Texto copiado para a área de transferência!</div>
 
 <script>
 // Converte número com vírgula para float
@@ -303,6 +335,18 @@ function formatar4Casas(valor) {
 function formatarAmpere(valor) {
     if (isNaN(valor) || !isFinite(valor)) return "";
     return Math.round(valor).toString();
+}
+
+// Exibe notificação rápida sem bloqueio
+let toastTimeout;
+function mostrarAviso(mensagem) {
+    const toast = document.getElementById("toastAviso");
+    toast.textContent = mensagem;
+    toast.classList.add("show");
+    clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(() => {
+        toast.classList.remove("show");
+    }, 2500);
 }
 
 // Cálculo das correntes de curto com base em p.u. (Sbase = 100 MVA)
@@ -494,15 +538,15 @@ function gerarParecer() {
     document.getElementById("resultado").value = texto;
 }
 
-// Copiar para área de transferência
+// Copiar para área de transferência sem exigir clique em OK
 function copiarParecer() {
     const textarea = document.getElementById("resultado");
     if (!textarea.value) {
-        alert("Gere o parecer antes de copiar.");
+        mostrarAviso("Gere o parecer antes de copiar.");
         return;
     }
     navigator.clipboard.writeText(textarea.value);
-    alert("Parecer copiado para a área de transferência.");
+    mostrarAviso("Texto copiado para a área de transferência!");
 }
 
 // Limpar formulários
